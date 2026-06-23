@@ -1,207 +1,123 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useProposal, useBuy } from '@deriv/core';
-import type {
-  DerivWS,
-  ActiveSymbol,
-  Tick,
-  ProposalInfo,
-  ProposalParams,
-  BuyResult,
-} from '@deriv/core';
-import { useBaseTrading } from '@/hooks/use-base-trading';
-import type { UseBaseTradingParams } from '@/hooks/use-base-trading';
-import type { Direction, DurationSelectUnit, DurationOption, OpenPosition, ClosedPosition } from '../lib/types';
-import { getDurationOptions, computeEndTimeEpoch } from '@/lib/duration-utils';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useBaseTrading } from './use-base-trading';
 
-const CONTRACT_TYPES = ['CALL', 'PUT'];
-
-interface UseRiseFallTradingReturn {
-  ws: DerivWS | null;
-  isConnected: boolean;
-  isLoading: boolean;
-  error: string | null;
-  symbols: ActiveSymbol[];
-  activeSymbol: ActiveSymbol | null;
-  selectSymbol: (symbol: string) => void;
-  currentTick: Tick | null;
-  prices: number[];
-  pipSize: number;
-  direction: Direction;
-  setDirection: (direction: Direction) => void;
-  allowEquals: boolean;
-  setAllowEquals: (value: boolean) => void;
-  stake: string;
-  setStake: (value: string) => void;
-  duration: number;
-  setDuration: (value: number) => void;
-  durationOptions: DurationOption[];
-  durationUnit: DurationSelectUnit;
-  setDurationUnit: (unit: DurationSelectUnit) => void;
-  endDate: Date | undefined;
-  setEndDate: (date: Date | undefined) => void;
-  endTime: string;
-  setEndTime: (time: string) => void;
-  proposal: ProposalInfo | null;
-  buyContract: () => Promise<void>;
-  isBuying: boolean;
-  buyResult: BuyResult | null;
-  buyError: string | null;
-  clearBuyResult: () => void;
-  openPositions: OpenPosition[];
-  closedPositions: ClosedPosition[];
-  sellContract: (contractId: number, bidPrice: string) => Promise<void>;
-  sellingId: number | null;
-  sellError: string | null;
-  clearSellError: () => void;
+export interface UpDownAssetMetrics {
+  history: number[];
+  timeHistory: number[];
+  lastDirection: number;
+  currentStreak: number;
+  globalTickCounter: number;
+  isPendingDelay: boolean;
+  delayExpiryTick: number;
+  delayDirection: number;
+  counts: {
+    3: { up: number; down: number };
+    4: { up: number; down: number };
+    5: { up: number; down: number };
+  };
 }
 
-export type UseRiseFallTradingParams = Pick<UseBaseTradingParams, 'ws' | 'isConnected' | 'isExhausted' | 'isAuthenticated' | 'onAuthWSFailed'>;
-
-export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticated, onAuthWSFailed }: UseRiseFallTradingParams): UseRiseFallTradingReturn {
+export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticated, onAuthWSFailed }: any) {
+  // Leverage the native data clearinghouse stream from the goldrush template repository
   const {
     ws: tradingWs,
     isConnected: tradingIsConnected,
-    isLoading,
-    error,
     symbols,
-    activeSymbol,
-    selectSymbol,
-    currentTick,
-    prices,
-    pipSize,
-    contracts,
-    openPositions,
-    closedPositions,
-    sellContract,
-    sellingId,
-    sellError,
-    clearSellError,
-  } = useBaseTrading({ ws, isConnected, isExhausted, isAuthenticated, onAuthWSFailed, contractTypes: CONTRACT_TYPES });
+  } = useBaseTrading({ ws, isConnected, isExhausted, isAuthenticated, onAuthWSFailed, contractTypes: ['CALL', 'PUT'] });
 
-  const [direction, setDirection] = useState<Direction>('CALL');
-  const [allowEquals, setAllowEquals] = useState<boolean>(false);
-  const [stake, setStake] = useState<string>('10');
-  const [duration, setDuration] = useState<number>(1);
-  const [durationUnit, setDurationUnitRaw] = useState<DurationSelectUnit>('t');
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [endTime, setEndTime] = useState<string>('');
-  const [durationOptionsSymbol, setDurationOptionsSymbol] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<string>('R_10');
+  const [targetTickConfig, setTargetTickCondition] = useState<number>(5);
+  const [globalStake, setGlobalStake] = useState<number>(0.35); // Enforced strict default stake context
+  const [executionMode, setExecutionMode] = useState<'manual' | 'dynamic'>('manual');
+  const [simulationLogs, setSimulationLogs] = useState<string[]>([]);
 
-  const durationOptions = useMemo(() => getDurationOptions(contracts), [contracts]);
+  // Persistent reference matrix for parallel background track computation loops
+  const metricsRef = useRef<Record<string, UpDownAssetMetrics>>({
+    'R_10': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
+    'R_25': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
+    'R_50': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
+    'R_100': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
+    '1HZ10V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
+    '1HZ25V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
+    '1HZ50V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
+    '1HZ100V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } }
+  });
 
-  // Track durationUnit and activeSymbol in refs so the duration-options effect doesn't list them in deps
-  const durationUnitRef = useRef(durationUnit);
-  const activeSymbolKeyRef = useRef(activeSymbol?.underlying_symbol);
+  const addLog = useCallback((line: string) => {
+    setSimulationLogs(prev => [line, ...prev].slice(0, 400));
+  }, []);
 
-  useEffect(() => {
-    durationUnitRef.current = durationUnit;
-  }, [durationUnit]);
+  const executeOrderPayload = useCallback((symbol: string, direction: 'CALL' | 'PUT') => {
+    if (!tradingWs || tradingWs.readyState !== WebSocket.OPEN) return;
 
-  useEffect(() => {
-    activeSymbolKeyRef.current = activeSymbol?.underlying_symbol;
-  }, [activeSymbol?.underlying_symbol]);
-
-  /* eslint-disable react-hooks/set-state-in-effect -- reset duration/end-time state when contracts-derived options change */
-  useEffect(() => {
-    if (!durationOptions.length) return;
-    setEndDate(undefined);
-    setEndTime('');
-    setDurationOptionsSymbol(activeSymbolKeyRef.current ?? null);
-    const currentOpt = durationOptions.find(o => o.unit === durationUnitRef.current);
-    if (!currentOpt) {
-      const first = durationOptions[0];
-      setDurationUnitRaw(first.unit);
-      if (first.unit !== 'end-time') setDuration(first.min);
-    } else if (currentOpt.unit !== 'end-time') {
-      setDuration(prev => (prev < currentOpt.min || prev > currentOpt.max) ? currentOpt.min : prev);
-    }
-  }, [durationOptions]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  const setDurationUnit = useCallback((unit: DurationSelectUnit) => {
-    setDurationUnitRaw(unit);
-    const opt = durationOptions.find(o => o.unit === unit);
-    if (opt && unit !== 'end-time') setDuration(opt.min);
-  }, [durationOptions]);
-
-  const { buyContract: buyWithProposal, isBuying, buyResult, buyError, clearBuyResult } =
-    useBuy(tradingWs, tradingIsConnected);
-
-  const proposalParams: ProposalParams | null = useMemo(() => {
-    if (isBuying || !activeSymbol || !durationOptions.length) return null;
-    if (durationOptionsSymbol !== activeSymbol.underlying_symbol) return null;
-    const stakeNum = parseFloat(stake);
-    if (!stakeNum || stakeNum <= 0) return null;
-
-    const base = {
-      contractType: allowEquals ? `${direction}E` : direction,
-      symbol: activeSymbol.underlying_symbol,
-      amount: stakeNum,
-      basis: 'stake' as const,
+    const timestamp = new Date().toLocaleTimeString();
+    tradingWs.send(JSON.stringify({
+      proposal: 1,
+      amount: globalStake,
+      basis: 'stake',
+      contract_type: direction, // Direct institutional mapping variables passed to official server
       currency: 'USD',
-    };
+      duration: targetTickConfig,
+      duration_unit: 't',
+      symbol: symbol
+    }));
 
-    if (durationUnit === 'end-time') {
-      const dateExpiry = computeEndTimeEpoch(endDate, endTime);
-      if (!dateExpiry) return null;
-      return { ...base, duration: 0, durationUnit: 'd', dateExpiry };
-    }
+    addLog(`[${timestamp}] PIPELINE DISPATCHED -> ${symbol} │ TYPE: ${direction} │ UNITS: $${globalStake}`);
+  }, [tradingWs, globalStake, targetTickConfig, addLog]);
 
-    const opt = durationOptions.find(o => o.unit === durationUnit);
-    if (!opt || duration < opt.min || duration > opt.max) return null;
+  useEffect(() => {
+    if (!tradingWs || !tradingIsConnected) return;
 
-    if (durationUnit === 'h') {
-      return { ...base, duration: duration * 60, durationUnit: 'm' };
-    }
+    const unbind = tradingWs.onMessage((event: any) => {
+      const packet = JSON.parse(event.data || event);
+      if (packet.error) return;
 
-    return { ...base, duration, durationUnit };
-  }, [activeSymbol, direction, allowEquals, stake, duration, durationUnit, endDate, endTime, isBuying, durationOptions, durationOptionsSymbol]);
+      if (packet.msg_type === 'tick' && packet.tick) {
+        const symbol = packet.tick.symbol;
+        const state = metricsRef.current[symbol];
+        if (!state) return;
 
-  const { proposal } = useProposal(tradingWs, tradingIsConnected, proposalParams);
+        const quote = Number(packet.tick.quote);
+        const now = Date.now();
 
-  const buyContract = useCallback(async () => {
-    if (proposal) await buyWithProposal(proposal);
-  }, [proposal, buyWithProposal]);
+        state.globalTickCounter++;
+        state.history.push(quote);
+        state.timeHistory.push(now);
+        if (state.history.length > 200) { state.history.shift(); state.timeHistory.shift(); }
+
+        if (state.history.length < 2) return;
+        const delta = quote - state.history[state.history.length - 2];
+        const direction = delta > 0 ? 1 : delta < 0 ? -1 : 0;
+
+        if (direction !== 0 && direction === state.lastDirection) {
+          state.currentStreak++;
+          if (state.currentStreak === 3) state.counts[3][direction === 1 ? 'up' : 'down']++;
+          if (state.currentStreak === 4) state.counts[4][direction === 1 ? 'up' : 'down']++;
+          if (state.currentStreak === 5) state.counts[5][direction === 1 ? 'up' : 'down']++;
+
+          // DYNAMIC MODE ENGINE: Dispatches raw CALL/PUT contract strings automatically if configuration boundaries match
+          if (executionMode === 'dynamic' && state.currentStreak === targetTickConfig) {
+            executeOrderPayload(symbol, direction === 1 ? 'CALL' : 'PUT');
+          }
+        } else {
+          state.lastDirection = direction;
+          state.currentStreak = 1;
+        }
+      }
+
+      if (packet.msg_type === 'buy' && packet.buy) {
+        addLog(`[${new Date().toLocaleTimeString()}] SERVER RECEIPT ACCEPTED. CONTRACT ID: ${packet.buy.contract_id}`);
+      }
+    });
+
+    return () => unbind();
+  }, [tradingWs, tradingIsConnected, executionMode, targetTickConfig, executeOrderPayload, addLog]);
 
   return {
-    ws: tradingWs,
-    isConnected: tradingIsConnected,
-    isLoading,
-    error,
-    symbols,
-    activeSymbol,
-    selectSymbol,
-    currentTick,
-    prices,
-    pipSize,
-    direction,
-    setDirection,
-    allowEquals,
-    setAllowEquals,
-    stake,
-    setStake,
-    duration,
-    setDuration,
-    durationOptions,
-    durationUnit,
-    setDurationUnit,
-    endDate,
-    setEndDate,
-    endTime,
-    setEndTime,
-    proposal,
-    buyContract,
-    isBuying,
-    buyResult,
-    buyError,
-    clearBuyResult,
-    openPositions,
-    closedPositions,
-    sellContract,
-    sellingId,
-    sellError,
-    clearSellError,
+    ws: tradingWs, isConnected: tradingIsConnected, symbols, selectedAsset, setSelectedAsset,
+    globalStake, setGlobalStake, targetTickConfig, setTargetTickCondition, executionMode, setExecutionMode,
+    simulationLogs, activeMetrics: metricsRef.current[selectedAsset], allMetrics: metricsRef.current, executeOrderPayload
   };
 }
