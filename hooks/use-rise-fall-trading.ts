@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useBaseTrading } from './use-base-trading';
-import type { Direction, DurationSelectUnit, DurationOption, OpenPosition } from '../lib/types';
-import type { ProposalInfo, BuyResult } from '@deriv/core';
 
 export interface UpDownAssetMetrics {
   history: number[];
@@ -22,7 +20,6 @@ export interface UpDownAssetMetrics {
 }
 
 export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticated, onAuthWSFailed }: any) {
-  // Use the native base sync layer from your template repository
   const baseTrading = useBaseTrading({ 
     ws, 
     isConnected, 
@@ -32,20 +29,16 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
     contractTypes: ['CALL', 'PUT'] 
   });
 
-  // Keep original state parameters intact for strict TypeScript prop matching
-  const [direction, setDirection] = useState<Direction>('CALL');
+  const [direction, setDirection] = useState<string>('CALL');
   const [allowEquals, setAllowEquals] = useState<boolean>(false);
-  const [stake, setStake] = useState<string>('0.35'); // Lock user preference default context
-  const [duration, setDuration] = useState<number>(5); // Default to 5 Ticks config
-  const [durationUnit, setDurationUnit] = useState<DurationSelectUnit>('t');
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [endTime, setEndTime] = useState<string>('');
+  const [stake, setStake] = useState<string>('0.35'); 
+  const [duration, setDuration] = useState<number>(5); 
+  const [durationUnit, setDurationUnit] = useState<string>('t');
   const [isBuying, setIsBuying] = useState<boolean>(false);
-  const [buyResult, setBuyResult] = useState<BuyResult | null>(null);
-  const [buyError, setBuyError] = useState<string | null>(null);
-  const [sellingId, setSellingId] = useState<number | null>(null);
+  const [buyResult, setBuyResult] = useState<any>(null);
+  const [buyError, setBuyError] = useState<any>(null);
+  const [sellingId, setSellingId] = useState<any>(null);
 
-  // Custom strategy workstation parameters
   const [selectedAsset, setSelectedAsset] = useState<string>('R_10');
   const [executionMode, setExecutionMode] = useState<'manual' | 'dynamic'>('manual');
   const [simulationLogs, setSimulationLogs] = useState<string[]>([]);
@@ -73,18 +66,18 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       proposal: 1,
       amount: parseFloat(stake) || 0.35,
       basis: 'stake',
-      contract_type: orderDirection, // Direct institutional backend variable strings map pass
+      contract_type: orderDirection,
       currency: 'USD',
       duration: duration,
       duration_unit: durationUnit,
       symbol: symbol
     }));
 
-    addLog(`[${timestamp}] PIPELINE DISPATCHED -> ${symbol} │ TYPE: ${orderDirection} │ UNITS: $${stake}`);
+    addLog(`[${timestamp}] Outbound: ${symbol} │ ${orderDirection} │ $${stake}`);
   }, [baseTrading.ws, stake, duration, durationUnit, addLog]);
 
   const buyContract = useCallback(async () => {
-    executeOrderPayload(selectedAsset, direction);
+    executeOrderPayload(selectedAsset, direction as 'CALL' | 'PUT');
   }, [executeOrderPayload, selectedAsset, direction]);
 
   const clearBuyResult = useCallback(() => {
@@ -128,7 +121,6 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
           if (state.currentStreak === 4) state.counts[4][currentDirection === 1 ? 'up' : 'down']++;
           if (state.currentStreak === 5) state.counts[5][currentDirection === 1 ? 'up' : 'down']++;
 
-          // AUTOMATIC DYNAMIC MODE TRIGGER LOOP
           if (executionMode === 'dynamic' && state.currentStreak === duration) {
             executeOrderPayload(symbol, currentDirection === 1 ? 'CALL' : 'PUT');
           }
@@ -139,7 +131,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       }
 
       if (packet.msg_type === 'buy' && packet.buy) {
-        addLog(`[${new Date().toLocaleTimeString()}] SERVER RECEIPT ACCEPTED. CONTRACT ID: ${packet.buy.contract_id}`);
+        addLog(`[${new Date().toLocaleTimeString()}] Server Receipt: ${packet.buy.contract_id}`);
       }
     });
 
@@ -153,39 +145,11 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
 
   return {
     ...baseTrading,
-    direction,
-    setDirection,
-    allowEquals,
-    setAllowEquals,
-    stake,
-    setStake,
-    duration,
-    setDuration,
-    durationOptions: [] as DurationOption[],
-    durationUnit,
-    setDurationUnit,
-    endDate,
-    setEndDate,
-    endTime,
-    setEndTime,
-    proposal: null as ProposalInfo | null,
-    buyContract,
-    isBuying,
-    buyResult,
-    buyError,
-    clearBuyResult,
-    openPositions: [] as OpenPosition[],
-    sellContract,
-    sellingId,
-    
-    // Strategy items accessed by the updated views
-    selectedAsset,
-    setSelectedAsset,
-    executionMode,
-    setExecutionMode,
-    simulationLogs,
-    activeMetrics: metricsRef.current[selectedAsset],
-    allMetrics: metricsRef.current,
-    executeOrderPayload
+    direction, setDirection, allowEquals, setAllowEquals, stake, setStake, duration, setDuration,
+    durationOptions: [] as any[], durationUnit, setDurationUnit, endDate: undefined, setEndDate: () => {},
+    endTime: '', setEndTime: () => {}, proposal: null, buyContract, isBuying, buyResult, buyError,
+    clearBuyResult, openPositions: [] as any[], sellContract, sellingId, selectedAsset, setSelectedAsset,
+    executionMode, setExecutionMode, simulationLogs, activeMetrics: metricsRef.current[selectedAsset],
+    allMetrics: metricsRef.current, executeOrderPayload
   };
 }
