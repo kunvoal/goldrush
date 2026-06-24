@@ -5,43 +5,34 @@ import { Header } from '@/components/custom/header';
 import { Footer } from '@/components/custom/footer';
 import { ThemeToggle } from '@/components/custom/theme-toggle';
 import { RiseFallChart } from './rise-fall-chart';
-import type { RiseFallViewProps } from './rise-fall-view';
+
+export interface RiseFallViewProps {
+  authState: any;
+  accounts: any[];
+  activeAccount: any;
+  onLogin: () => Promise<void>;
+  onSignUp: () => Promise<void>;
+  onLogout: () => void;
+  onSwitchAccount: (accountId: string) => Promise<void>;
+  trading: any;
+  [key: string]: any; // Open catch-all prevents template prop layout mismatches
+}
 
 export function RiseFallView({
-  gameState,
-  authState,
-  accounts,
-  activeAccount,
-  onLogin,
-  onSignUp,
-  onLogout,
-  onSwitchAccount,
-  trading,
-  logoSrc,
-  appName,
-  chartData,
-  getQuotes,
-  subscribeQuotes,
-  unsubscribeQuotes
-}: RiseFallViewProps & { trading: any }) {
+  authState, accounts, activeAccount, onLogin, onSignUp, onLogout, onSwitchAccount, trading,
+  logoSrc, appName, chartData, getQuotes, subscribeQuotes, unsubscribeQuotes
+}: RiseFallViewProps) {
 
   return (
     <main className="flex flex-col bg-[#050507] text-[#c9ced6] min-h-screen font-mono antialiased select-none">
       <Header
-        authState={authState}
-        accounts={accounts}
-        activeAccount={activeAccount}
-        onLogin={onLogin}
-        onSignUp={onSignUp}
-        onLogout={onLogout}
-        onSwitchAccount={onSwitchAccount}
-        logoSrc={logoSrc}
-        appName={appName}
-        actions={<ThemeToggle />}
+        authState={authState} accounts={accounts} activeAccount={activeAccount}
+        onLogin={onLogin} onSignUp={onSignUp} onLogout={onLogout} onSwitchAccount={onSwitchAccount}
+        logoSrc={logoSrc} appName={appName} actions={<ThemeToggle />}
       />
       <div className="h-[64px] shrink-0" />
 
-      {/* TOP CONTROL PLATFORM LINK STRIP */}
+      {/* MINIMAL STATUS LAYER STRIP */}
       <div className="m-2 p-2 bg-[#0a0a0d] border border-[#16161f] flex items-center justify-between gap-2 flex-wrap rounded">
         <div className="bg-[#020204] border border-[#16161f] p-1.5 px-3 font-bold text-xs rounded">
           <span className="text-[#444b55]">Bal:</span>{' '}
@@ -64,26 +55,21 @@ export function RiseFallView({
         </select>
       </div>
 
-      {/* WORKSTATION VIEWPORT VIEW PANELS */}
+      {/* CORE CONTENT LAYOUT */}
       <div className="flex-1 grid grid-rows-[1fr_auto] gap-2 p-2 min-h-0">
         
-        {/* UPPER WINDOW CONTAINER: NATIVE TEMPLATE CHART FRAME MOUNT */}
+        {/* CHARTS LAYER SECTION CONTAINER */}
         <div className="bg-[#0a0a0d] border border-[#16161f] p-2 flex flex-col min-h-[260px] rounded relative overflow-hidden">
           <RiseFallChart 
-            ws={trading.ws}
-            isConnected={trading.isConnected}
-            symbol={trading.selectedAsset}
-            chartData={chartData}
-            getQuotes={getQuotes}
-            subscribeQuotes={subscribeQuotes}
-            unsubscribeQuotes={unsubscribeQuotes}
+            ws={trading.ws} isConnected={trading.isConnected} symbol={trading.selectedAsset}
+            chartData={chartData} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes}
           />
         </div>
 
-        {/* CONTROLS SWITCH PARAMETERS BLOCK */}
+        {/* OPERATIONS COMPONENT WRAPPER */}
         <div className="bg-[#0a0a0d] border border-[#16161f] p-3 rounded flex flex-col gap-3">
           
-          {/* RESPONSIVE RADIO BUTTON MODE SWITCHES BLOCK */}
+          {/* RESPONSIVE RADIO SWITCHES */}
           <div className="flex items-center justify-between border-b border-[#16161f] pb-2.5">
             <span className="text-[10px] font-bold text-[#444b55] uppercase tracking-wider">Mode:</span>
             <div className="flex items-center gap-4 bg-[#020204] p-1.5 px-3 border border-[#16161f] rounded">
@@ -108,7 +94,7 @@ export function RiseFallView({
             </div>
           </div>
 
-          {/* PARAMETERS STRIDE INPUT MATRIX ROW */}
+          {/* PARAMETERS INPUT GRID */}
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col bg-[#020204] border border-[#16161f] p-1.5 rounded">
               <span className="text-[9px] text-[#444b55] font-bold uppercase">Stake</span>
@@ -130,7 +116,7 @@ export function RiseFallView({
             </div>
           </div>
 
-          {/* HIGH-DENSITY METRICS WAVE STATE RESPONSE TABLE */}
+          {/* DENSITY WAVE MATRIX RESPONSE DATA TABLE */}
           <div className="bg-[#020204] border border-[#16161f] rounded overflow-hidden">
             <table className="w-full text-center text-xs border-collapse">
               <thead>
@@ -160,7 +146,7 @@ export function RiseFallView({
             </table>
           </div>
 
-          {/* MANUAL EXECUTIONS BUTTONS */}
+          {/* DIRECT TRIGGER BUTTON ACTIONS */}
           <div className="grid grid-cols-2 gap-2 mt-1">
             <button 
               className="bg-[#00e699] text-[#000] font-bold text-xs p-2.5 rounded cursor-pointer uppercase hover:opacity-90 active:scale-[0.99] transition"
@@ -179,7 +165,7 @@ export function RiseFallView({
         </div>
       </div>
 
-      {/* FULL-WIDTH TERMINAL WINDOW BOX */}
+      {/* TERMINAL STATUS BUFFER READOUT BOX */}
       <div className="m-2 p-2 bg-[#0a0a0d] border border-[#16161f] h-[120px] flex flex-col min-h-0 rounded">
         <div className="flex-1 overflow-y-auto p-1 bg-[#020204] font-mono text-[10px] text-[#ffffff] font-bold leading-normal">
           {trading.simulationLogs.length === 0 ? (
