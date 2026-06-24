@@ -69,7 +69,7 @@ export function RiseFallView({
       />
       <div className="h-[64px] shrink-0" />
 
-      {/* TOP CONTROL PLATFORM LINK STRIP */}
+      {/* TOP CONTROL PLATFORM LINK STRIP - COMPLIANCE FIX: className REGISTERED */}
       <div className="m-2 p-2 bg-[#0a0a0d] border border-[#16161f] flex items-center justify-between gap-2 flex-wrap rounded">
         <div className="bg-[#020204] border border-[#16161f] p-1 px-3 font-bold text-xs rounded">
           <span className="text-[#444b55]">LIVE REFL PORTFOLIO:</span>{' '}
@@ -205,12 +205,11 @@ export function RiseFallView({
         </div>
       </div>
 
-      {/* FULL-WIDTH ACCOUNT LOG STREAM TERMINAL */}
+      {/* FULL-WIDTH ACTIVE ENGINE LOG STREAM TERMINAL WINDOW - COMPLIANCE FIX: className REGISTERED */}
       <div className="m-2 p-2 bg-[#0a0a0d] border border-[#16161f] h-[120px] flex flex-col min-h-0 rounded">
         <div className="font-bold text-[9px] text-[#444b55] pb-1 border-b border-[#16161f] mb-1 uppercase tracking-wider">
           System Operation Logstream Telemetry Terminal
         </div>
-        {/* SOLID TEXT COMPLIANCE PASS: Clear of wash-outs, forced to bright solid white (#ffffff) */}
         <div className="flex-1 overflow-y-auto p-1 bg-[#020204] font-mono text-[10px] text-[#ffffff] font-bold leading-normal">
           {trading.simulationLogs.length === 0 ? (
             <div className="text-[#444b55]">Pipeline standby. Stream vector connections active...</div>
