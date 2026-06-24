@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useBaseTrading } from './use-base-trading';
+import type { Direction, DurationSelectUnit, DurationOption, OpenPosition } from '../lib/types';
+import type { ProposalInfo, BuyResult } from '@deriv/core';
 
 export interface UpDownAssetMetrics {
   history: number[];
@@ -20,20 +22,34 @@ export interface UpDownAssetMetrics {
 }
 
 export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticated, onAuthWSFailed }: any) {
-  // Leverage the native data clearinghouse stream from the goldrush template repository
-  const {
-    ws: tradingWs,
-    isConnected: tradingIsConnected,
-    symbols,
-  } = useBaseTrading({ ws, isConnected, isExhausted, isAuthenticated, onAuthWSFailed, contractTypes: ['CALL', 'PUT'] });
+  // Use the native base sync layer from your template repository
+  const baseTrading = useBaseTrading({ 
+    ws, 
+    isConnected, 
+    isExhausted, 
+    isAuthenticated, 
+    onAuthWSFailed, 
+    contractTypes: ['CALL', 'PUT'] 
+  });
 
+  // Keep original state parameters intact for strict TypeScript prop matching
+  const [direction, setDirection] = useState<Direction>('CALL');
+  const [allowEquals, setAllowEquals] = useState<boolean>(false);
+  const [stake, setStake] = useState<string>('0.35'); // Lock user preference default context
+  const [duration, setDuration] = useState<number>(5); // Default to 5 Ticks config
+  const [durationUnit, setDurationUnit] = useState<DurationSelectUnit>('t');
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [endTime, setEndTime] = useState<string>('');
+  const [isBuying, setIsBuying] = useState<boolean>(false);
+  const [buyResult, setBuyResult] = useState<BuyResult | null>(null);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  const [sellingId, setSellingId] = useState<number | null>(null);
+
+  // Custom strategy workstation parameters
   const [selectedAsset, setSelectedAsset] = useState<string>('R_10');
-  const [targetTickConfig, setTargetTickCondition] = useState<number>(5);
-  const [globalStake, setGlobalStake] = useState<number>(0.35); // Enforced strict default stake context
   const [executionMode, setExecutionMode] = useState<'manual' | 'dynamic'>('manual');
   const [simulationLogs, setSimulationLogs] = useState<string[]>([]);
 
-  // Persistent reference matrix for parallel background track computation loops
   const metricsRef = useRef<Record<string, UpDownAssetMetrics>>({
     'R_10': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
     'R_25': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
@@ -46,31 +62,46 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
   });
 
   const addLog = useCallback((line: string) => {
-    setSimulationLogs(prev => [line, ...prev].slice(0, 400));
+    setSimulationLogs(prev => [line, ...prev].slice(0, 300));
   }, []);
 
-  const executeOrderPayload = useCallback((symbol: string, direction: 'CALL' | 'PUT') => {
-    if (!tradingWs || tradingWs.readyState !== WebSocket.OPEN) return;
+  const executeOrderPayload = useCallback((symbol: string, orderDirection: 'CALL' | 'PUT') => {
+    if (!baseTrading.ws || baseTrading.ws.readyState !== WebSocket.OPEN) return;
 
     const timestamp = new Date().toLocaleTimeString();
-    tradingWs.send(JSON.stringify({
+    baseTrading.ws.send(JSON.stringify({
       proposal: 1,
-      amount: globalStake,
+      amount: parseFloat(stake) || 0.35,
       basis: 'stake',
-      contract_type: direction, // Direct institutional mapping variables passed to official server
+      contract_type: orderDirection, // Direct institutional backend variable strings map pass
       currency: 'USD',
-      duration: targetTickConfig,
-      duration_unit: 't',
+      duration: duration,
+      duration_unit: durationUnit,
       symbol: symbol
     }));
 
-    addLog(`[${timestamp}] PIPELINE DISPATCHED -> ${symbol} │ TYPE: ${direction} │ UNITS: $${globalStake}`);
-  }, [tradingWs, globalStake, targetTickConfig, addLog]);
+    addLog(`[${timestamp}] PIPELINE DISPATCHED -> ${symbol} │ TYPE: ${orderDirection} │ UNITS: $${stake}`);
+  }, [baseTrading.ws, stake, duration, durationUnit, addLog]);
+
+  const buyContract = useCallback(async () => {
+    executeOrderPayload(selectedAsset, direction);
+  }, [executeOrderPayload, selectedAsset, direction]);
+
+  const clearBuyResult = useCallback(() => {
+    setBuyResult(null);
+    setBuyError(null);
+  }, []);
+
+  const sellContract = useCallback(async (contractId: number, bidPrice: string) => {
+    if (baseTrading.ws) {
+      baseTrading.ws.send(JSON.stringify({ sell: contractId, price: parseFloat(bidPrice) }));
+    }
+  }, [baseTrading.ws]);
 
   useEffect(() => {
-    if (!tradingWs || !tradingIsConnected) return;
+    if (!baseTrading.ws || !baseTrading.isConnected) return;
 
-    const unbind = tradingWs.onMessage((event: any) => {
+    const unbind = baseTrading.ws.onMessage((event: any) => {
       const packet = JSON.parse(event.data || event);
       if (packet.error) return;
 
@@ -89,20 +120,20 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
 
         if (state.history.length < 2) return;
         const delta = quote - state.history[state.history.length - 2];
-        const direction = delta > 0 ? 1 : delta < 0 ? -1 : 0;
+        const currentDirection = delta > 0 ? 1 : delta < 0 ? -1 : 0;
 
-        if (direction !== 0 && direction === state.lastDirection) {
+        if (currentDirection !== 0 && currentDirection === state.lastDirection) {
           state.currentStreak++;
-          if (state.currentStreak === 3) state.counts[3][direction === 1 ? 'up' : 'down']++;
-          if (state.currentStreak === 4) state.counts[4][direction === 1 ? 'up' : 'down']++;
-          if (state.currentStreak === 5) state.counts[5][direction === 1 ? 'up' : 'down']++;
+          if (state.currentStreak === 3) state.counts[3][currentDirection === 1 ? 'up' : 'down']++;
+          if (state.currentStreak === 4) state.counts[4][currentDirection === 1 ? 'up' : 'down']++;
+          if (state.currentStreak === 5) state.counts[5][currentDirection === 1 ? 'up' : 'down']++;
 
-          // DYNAMIC MODE ENGINE: Dispatches raw CALL/PUT contract strings automatically if configuration boundaries match
-          if (executionMode === 'dynamic' && state.currentStreak === targetTickConfig) {
-            executeOrderPayload(symbol, direction === 1 ? 'CALL' : 'PUT');
+          // AUTOMATIC DYNAMIC MODE TRIGGER LOOP
+          if (executionMode === 'dynamic' && state.currentStreak === duration) {
+            executeOrderPayload(symbol, currentDirection === 1 ? 'CALL' : 'PUT');
           }
         } else {
-          state.lastDirection = direction;
+          state.lastDirection = currentDirection;
           state.currentStreak = 1;
         }
       }
@@ -112,12 +143,49 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       }
     });
 
+    const assetKeys = Object.keys(metricsRef.current);
+    assetKeys.forEach(asset => {
+      baseTrading.ws.send(JSON.stringify({ ticks: asset }));
+    });
+
     return () => unbind();
-  }, [tradingWs, tradingIsConnected, executionMode, targetTickConfig, executeOrderPayload, addLog]);
+  }, [baseTrading.ws, baseTrading.isConnected, executionMode, duration, executeOrderPayload, addLog]);
 
   return {
-    ws: tradingWs, isConnected: tradingIsConnected, symbols, selectedAsset, setSelectedAsset,
-    globalStake, setGlobalStake, targetTickConfig, setTargetTickCondition, executionMode, setExecutionMode,
-    simulationLogs, activeMetrics: metricsRef.current[selectedAsset], allMetrics: metricsRef.current, executeOrderPayload
+    ...baseTrading,
+    direction,
+    setDirection,
+    allowEquals,
+    setAllowEquals,
+    stake,
+    setStake,
+    duration,
+    setDuration,
+    durationOptions: [] as DurationOption[],
+    durationUnit,
+    setDurationUnit,
+    endDate,
+    setEndDate,
+    endTime,
+    setEndTime,
+    proposal: null as ProposalInfo | null,
+    buyContract,
+    isBuying,
+    buyResult,
+    buyError,
+    clearBuyResult,
+    openPositions: [] as OpenPosition[],
+    sellContract,
+    sellingId,
+    
+    // Strategy items accessed by the updated views
+    selectedAsset,
+    setSelectedAsset,
+    executionMode,
+    setExecutionMode,
+    simulationLogs,
+    activeMetrics: metricsRef.current[selectedAsset],
+    allMetrics: metricsRef.current,
+    executeOrderPayload
   };
 }
