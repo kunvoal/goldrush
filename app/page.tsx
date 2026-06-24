@@ -67,7 +67,7 @@ export default function UpDownStrategyPage() {
       getQuotes={getQuotes}
       subscribeQuotes={subscribeQuotes}
       unsubscribeQuotes={unsubscribeQuotes}
-      trading={trading} // Inject our logic augment handle object safely
+      trading={trading} 
     />
   );
 }
