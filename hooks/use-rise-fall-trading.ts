@@ -94,16 +94,16 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
   useEffect(() => {
     if (!baseTrading.ws || !baseTrading.isConnected) return;
 
-    const unbind = baseTrading.ws.onMessage((event: any) => {
-      const packet = JSON.parse(event.data || event);
+    const unbind = baseTrading.ws.onMessage((packet: Record<string, unknown>) => {
       if (packet.error) return;
 
       if (packet.msg_type === 'tick' && packet.tick) {
-        const symbol = packet.tick.symbol;
+        const tick = packet.tick as Record<string, unknown>;
+        const symbol = tick.symbol as string;
         const state = metricsRef.current[symbol];
         if (!state) return;
 
-        const quote = Number(packet.tick.quote);
+        const quote = Number(tick.quote);
         const now = Date.now();
 
         state.globalTickCounter++;
@@ -131,7 +131,8 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       }
 
       if (packet.msg_type === 'buy' && packet.buy) {
-        addLog(`[${new Date().toLocaleTimeString()}] Server Receipt: ${packet.buy.contract_id}`);
+        const buy = packet.buy as Record<string, unknown>;
+        addLog(`[${new Date().toLocaleTimeString()}] Server Receipt: ${buy.contract_id}`);
       }
     });
 
