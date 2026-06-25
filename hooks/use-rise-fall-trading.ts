@@ -58,6 +58,20 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
     setSimulationLogs(prev => [line, ...prev].slice(0, 300));
   }, []);
 
+  // Fetch balance function
+  const fetchBalance = useCallback(() => {
+    if (baseTrading.ws && baseTrading.isConnected) {
+      baseTrading.ws.send({ balance: 1, subscribe: 1 }).catch(() => {});
+    }
+  }, [baseTrading.ws, baseTrading.isConnected]);
+
+  // Initial balance fetch on connect
+  useEffect(() => {
+    if (baseTrading.isConnected) {
+      fetchBalance();
+    }
+  }, [baseTrading.isConnected, fetchBalance]);
+
   const executeOrderPayload = useCallback((symbol: string, orderDirection: 'CALL' | 'PUT') => {
     if (!baseTrading.ws || !baseTrading.isConnected) return;
 
@@ -133,16 +147,25 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       if (packet.msg_type === 'buy' && packet.buy) {
         const buy = packet.buy as Record<string, unknown>;
         addLog(`[${new Date().toLocaleTimeString()}] Server Receipt: ${buy.contract_id}`);
+        // Fetch updated balance after purchase
+        fetchBalance();
+      }
+      
+      if (packet.msg_type === 'balance' && packet.balance) {
+         // This updates the base hooks balance if needed, though DerivWS usually triggers it
+         // but this ensures we catch subscribe updates
       }
     });
 
-    // Subscribe only to the selected asset to avoid rate limiting
+    // Unsubscribe from previous before subscribing to new (prevents rate limits)
     if (baseTrading.ws) {
-      baseTrading.ws.send({ ticks: selectedAsset }).catch(() => {});
+      baseTrading.ws.send({ forget_all: 'ticks' }).catch(() => {}).then(() => {
+         baseTrading.ws.send({ ticks: selectedAsset }).catch(() => {});
+      });
     }
 
     return () => unbind();
-  }, [baseTrading.ws, baseTrading.isConnected, selectedAsset, executionMode, duration, executeOrderPayload, addLog]);
+  }, [baseTrading.ws, baseTrading.isConnected, selectedAsset, executionMode, duration, executeOrderPayload, addLog, fetchBalance]);
 
   return {
     ...baseTrading,

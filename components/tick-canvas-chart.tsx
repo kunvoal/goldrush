@@ -1,0 +1,260 @@
+'use client';
+
+import React, { useRef, useEffect, useCallback, useState } from 'react';
+import type { UpDownAssetMetrics } from '@/hooks/use-rise-fall-trading';
+
+interface StreakRun {
+  startTime: number;
+  endTime: number;
+  length: number;
+  direction: number; // 1 = up, -1 = down
+}
+
+export interface TickCanvasChartProps {
+  /** Price history array */
+  history: number[];
+  /** Timestamp history (parallel to history) */
+  timeHistory: number[];
+  /** Currently selected tick duration (3, 4, or 5) */
+  selectedDuration: number;
+  /** Streak run events for overlay rendering */
+  streakRuns: StreakRun[];
+  /** Pip size for price formatting */
+  pipSize?: number;
+}
+
+export function TickCanvasChart({
+  history,
+  timeHistory,
+  selectedDuration,
+  streakRuns,
+  pipSize = 2,
+}: TickCanvasChartProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef(1.0);
+  const offsetRef = useRef(0);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const [, forceRender] = useState(0);
+
+  const redraw = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Background
+    ctx.fillStyle = '#020204';
+    ctx.fillRect(0, 0, W, H);
+
+    // Logical dimensions
+    const lW = W / dpr;
+    const lH = H / dpr;
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    if (history.length < 2) {
+      ctx.fillStyle = '#444b55';
+      ctx.font = '11px monospace';
+      ctx.fillText('Waiting for tick data stream...', 20, lH / 2);
+      ctx.restore();
+      return;
+    }
+
+    const quotes = history;
+    const times = timeHistory;
+    const len = quotes.length;
+
+    let minQ = Math.min(...quotes);
+    let maxQ = Math.max(...quotes);
+    if (maxQ === minQ) { maxQ += 0.0001; minQ -= 0.0001; }
+    const rangeQ = maxQ - minQ;
+
+    const minT = times[0];
+    const maxT = times[len - 1];
+    const rangeT = (maxT - minT) || 1;
+
+    const zoom = zoomRef.current;
+    const offset = offsetRef.current;
+
+    const getX = (t: number) => ((t - minT) / rangeT) * lW * zoom + offset;
+    const getY = (q: number) => lH - 20 - ((q - (minQ - rangeQ * 0.05)) / (rangeQ * 1.1)) * (lH - 40);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const y = 20 + (i / 4) * (lH - 40);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(lW, y);
+      ctx.stroke();
+    }
+
+    // Streak run highlight bands (blue)
+    const activeRuns = streakRuns.filter(r => {
+      return r.length === selectedDuration;
+    });
+
+    for (let i = 0; i < activeRuns.length; i++) {
+      const run = activeRuns[i];
+      const xStart = getX(run.startTime);
+      const xEnd = getX(run.endTime);
+
+      if (xEnd >= 0 && xStart <= lW) {
+        // Blue highlight band
+        ctx.fillStyle = run.direction === 1
+          ? 'rgba(0, 230, 153, 0.10)'
+          : 'rgba(255, 51, 85, 0.10)';
+        ctx.fillRect(xStart, 0, Math.max(xEnd - xStart, 2), lH);
+
+        // Vertical markers
+        ctx.strokeStyle = run.direction === 1
+          ? 'rgba(0, 230, 153, 0.35)'
+          : 'rgba(255, 51, 85, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(xStart, 0); ctx.lineTo(xStart, lH);
+        ctx.moveTo(xEnd, 0); ctx.lineTo(xEnd, lH);
+        ctx.stroke();
+      }
+
+      // Gap labels between consecutive runs
+      if (i > 0) {
+        const prevRun = activeRuns[i - 1];
+        const gapSeconds = Math.floor((run.startTime - prevRun.endTime) / 1000);
+
+        if (gapSeconds > 2) {
+          const midX = getX(prevRun.endTime + (run.startTime - prevRun.endTime) / 2);
+          if (midX > 10 && midX < lW - 10) {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(String(gapSeconds), midX, lH / 2);
+            ctx.textAlign = 'left';
+          }
+        }
+      }
+    }
+
+    // Price line
+    ctx.beginPath();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+
+    for (let i = 0; i < len; i++) {
+      const px = getX(times[i]);
+      const py = getY(quotes[i]);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // Latest price dot
+    if (len > 0) {
+      const lastX = getX(times[len - 1]);
+      const lastY = getY(quotes[len - 1]);
+      const prevQ = len >= 2 ? quotes[len - 2] : quotes[len - 1];
+      const isUp = quotes[len - 1] >= prevQ;
+
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = isUp ? '#00e699' : '#ff3355';
+      ctx.fill();
+
+      // Current price label
+      ctx.fillStyle = isUp ? '#00e699' : '#ff3355';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(quotes[len - 1].toFixed(pipSize), lW - 4, lastY - 6);
+      ctx.textAlign = 'left';
+    }
+
+    // Y-axis labels
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '9px monospace';
+    ctx.fillText(maxQ.toFixed(pipSize), 4, 14);
+    ctx.fillText(minQ.toFixed(pipSize), 4, lH - 6);
+
+    ctx.restore();
+  }, [history, timeHistory, selectedDuration, streakRuns, pipSize]);
+
+  // Resize observer
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    const canvas = canvasRef.current;
+    if (!wrapper || !canvas) return;
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = wrapper.clientWidth * dpr;
+      canvas.height = wrapper.clientHeight * dpr;
+      canvas.style.width = `${wrapper.clientWidth}px`;
+      canvas.style.height = `${wrapper.clientHeight}px`;
+      redraw();
+    };
+
+    const observer = new ResizeObserver(resize);
+    observer.observe(wrapper);
+    resize();
+
+    return () => observer.disconnect();
+  }, [redraw]);
+
+  // Redraw on data change
+  useEffect(() => { redraw(); }, [redraw]);
+
+  // Mouse events for pan/zoom
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging.current = true;
+      dragStartX.current = e.clientX - offsetRef.current;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging.current) {
+        offsetRef.current = e.clientX - dragStartX.current;
+        redraw();
+      }
+    };
+
+    const handleMouseUp = () => { isDragging.current = false; };
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      zoomRef.current = Math.max(0.2, Math.min(zoomRef.current * factor, 15.0));
+      redraw();
+    };
+
+    canvas.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('wheel', handleWheel);
+    };
+  }, [redraw]);
+
+  return (
+    <div ref={wrapperRef} className="w-full h-full relative" style={{ cursor: 'crosshair' }}>
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}

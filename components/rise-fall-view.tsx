@@ -4,7 +4,7 @@ import React from 'react';
 import { Header } from '@/components/custom/header';
 import { Footer } from '@/components/custom/footer';
 import { ThemeToggle } from '@/components/custom/theme-toggle';
-import { RiseFallChart } from './rise-fall-chart';
+import { TickCanvasChart } from './tick-canvas-chart';
 
 export interface RiseFallViewProps {
   authState: any;
@@ -32,15 +32,8 @@ export function RiseFallView({
       />
       <div className="h-[64px] shrink-0" />
 
-      {/* MINIMAL STATUS LAYER STRIP */}
-      <div className="m-2 p-2 bg-[#0a0a0d] border border-[#16161f] flex items-center justify-between gap-2 flex-wrap rounded">
-        <div className="bg-[#020204] border border-[#16161f] p-1.5 px-3 font-bold text-xs rounded">
-          <span className="text-[#444b55]">Bal:</span>{' '}
-          <span className="text-[#00e699]">${activeAccount ? Number(activeAccount.balance).toFixed(2) : '0.00'}</span>
-        </div>
-
         <select 
-          className="bg-[#020204] border border-[#16161f] text-[#38bdf8] font-bold text-xs p-1.5 px-3 outline-none cursor-pointer rounded"
+          className="bg-[#020204] border border-[#16161f] text-[#38bdf8] font-bold text-[10px] p-1.5 px-2 outline-none cursor-pointer rounded w-auto"
           value={trading.selectedAsset}
           onChange={(e) => trading.setSelectedAsset(e.target.value)}
         >
@@ -59,11 +52,12 @@ export function RiseFallView({
       <div className="flex-1 grid grid-rows-[1fr_auto] gap-2 p-2 min-h-0">
         
         {/* CHARTS LAYER SECTION CONTAINER */}
-        <div className="bg-[#0a0a0d] border border-[#16161f] p-2 flex flex-col min-h-[260px] rounded relative overflow-hidden">
-          <RiseFallChart 
-            symbolKey={trading.selectedAsset} symbol={trading.selectedAsset}
-            isConnectionOpened={trading.isConnected} isMobile={false}
-            chartData={chartData} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes}
+        <div className="bg-[#0a0a0d] border border-[#16161f] p-0 flex flex-col min-h-[260px] rounded relative overflow-hidden">
+          <TickCanvasChart 
+            history={trading.activeMetrics?.history || []}
+            timeHistory={trading.activeMetrics?.timeHistory || []}
+            selectedDuration={trading.duration}
+            streakRuns={[]} // To be populated if needed, but array history handles live tracking
           />
         </div>
 
@@ -100,7 +94,8 @@ export function RiseFallView({
             <div className="flex flex-col bg-[#020204] border border-[#16161f] p-1.5 rounded">
               <span className="text-[9px] text-[#444b55] font-bold uppercase">Stake</span>
               <input 
-                type="number" step="0.01" className="bg-transparent font-bold text-xs text-[#facc15] outline-none border-none mt-0.5"
+                type="text" inputMode="decimal"
+                className="bg-transparent font-bold text-xs text-[#facc15] outline-none border-none mt-0.5 w-full"
                 value={trading.stake} onChange={(e) => trading.setStake(e.target.value)}
               />
             </div>
@@ -148,15 +143,15 @@ export function RiseFallView({
           </div>
 
           {/* DIRECT TRIGGER BUTTON ACTIONS */}
-          <div className="grid grid-cols-2 gap-2 mt-1">
+          <div className="flex justify-center gap-4 mt-2">
             <button 
-              className="bg-[#00e699] text-[#000] font-bold text-xs p-2.5 rounded cursor-pointer uppercase hover:opacity-90 active:scale-[0.99] transition"
+              className="bg-[#00e699] text-[#000] font-bold text-sm h-[40px] w-[120px] rounded-lg cursor-pointer uppercase hover:opacity-90 active:scale-[0.99] transition shadow-[0_4px_14px_rgba(0,230,153,0.39)]"
               onClick={() => trading.executeOrderPayload(trading.selectedAsset, 'CALL')}
             >
               Up
             </button>
             <button 
-              className="bg-[#ff3355] text-[#fff] font-bold text-xs p-2.5 rounded cursor-pointer uppercase hover:opacity-90 active:scale-[0.99] transition"
+              className="bg-[#ff3355] text-[#fff] font-bold text-sm h-[40px] w-[120px] rounded-lg cursor-pointer uppercase hover:opacity-90 active:scale-[0.99] transition shadow-[0_4px_14px_rgba(255,51,85,0.39)]"
               onClick={() => trading.executeOrderPayload(trading.selectedAsset, 'PUT')}
             >
               Down
