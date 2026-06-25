@@ -61,7 +61,8 @@ export function RiseFallView({
         {/* CHARTS LAYER SECTION CONTAINER */}
         <div className="bg-[#0a0a0d] border border-[#16161f] p-2 flex flex-col min-h-[260px] rounded relative overflow-hidden">
           <RiseFallChart 
-            ws={trading.ws} isConnected={trading.isConnected} symbol={trading.selectedAsset}
+            symbolKey={trading.selectedAsset} symbol={trading.selectedAsset}
+            isConnectionOpened={trading.isConnected} isMobile={false}
             chartData={chartData} getQuotes={getQuotes} subscribeQuotes={subscribeQuotes} unsubscribeQuotes={unsubscribeQuotes}
           />
         </div>

@@ -59,10 +59,10 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
   }, []);
 
   const executeOrderPayload = useCallback((symbol: string, orderDirection: 'CALL' | 'PUT') => {
-    if (!baseTrading.ws || baseTrading.ws.readyState !== WebSocket.OPEN) return;
+    if (!baseTrading.ws || !baseTrading.isConnected) return;
 
     const timestamp = new Date().toLocaleTimeString();
-    baseTrading.ws.send(JSON.stringify({
+    baseTrading.ws.send({
       proposal: 1,
       amount: parseFloat(stake) || 0.35,
       basis: 'stake',
@@ -71,10 +71,10 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       duration: duration,
       duration_unit: durationUnit,
       symbol: symbol
-    }));
+    }).catch(() => {});
 
     addLog(`[${timestamp}] Outbound: ${symbol} │ ${orderDirection} │ $${stake}`);
-  }, [baseTrading.ws, stake, duration, durationUnit, addLog]);
+  }, [baseTrading.ws, baseTrading.isConnected, stake, duration, durationUnit, addLog]);
 
   const buyContract = useCallback(async () => {
     executeOrderPayload(selectedAsset, direction as 'CALL' | 'PUT');
@@ -87,7 +87,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
 
   const sellContract = useCallback(async (contractId: number, bidPrice: string) => {
     if (baseTrading.ws) {
-      baseTrading.ws.send(JSON.stringify({ sell: contractId, price: parseFloat(bidPrice) }));
+      baseTrading.ws.send({ sell: contractId, price: parseFloat(bidPrice) }).catch(() => {});
     }
   }, [baseTrading.ws]);
 
@@ -136,13 +136,13 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       }
     });
 
-    const assetKeys = Object.keys(metricsRef.current);
-    assetKeys.forEach(asset => {
-      baseTrading.ws.send(JSON.stringify({ ticks: asset }));
-    });
+    // Subscribe only to the selected asset to avoid rate limiting
+    if (baseTrading.ws) {
+      baseTrading.ws.send({ ticks: selectedAsset }).catch(() => {});
+    }
 
     return () => unbind();
-  }, [baseTrading.ws, baseTrading.isConnected, executionMode, duration, executeOrderPayload, addLog]);
+  }, [baseTrading.ws, baseTrading.isConnected, selectedAsset, executionMode, duration, executeOrderPayload, addLog]);
 
   return {
     ...baseTrading,
