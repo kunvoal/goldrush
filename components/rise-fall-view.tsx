@@ -32,8 +32,8 @@ export function RiseFallView({
       />
       <div className="h-[64px] shrink-0" />
 
-        <select 
-          className="bg-[#020204] border border-[#16161f] text-[#38bdf8] font-bold text-[10px] p-1.5 px-2 outline-none cursor-pointer rounded w-auto"
+      <div className="flex justify-end p-2 border-b border-[#16161f] bg-[#020204]">
+        <select
           value={trading.selectedAsset}
           onChange={(e) => trading.setSelectedAsset(e.target.value)}
         >

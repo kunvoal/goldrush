@@ -159,8 +159,9 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
 
     // Unsubscribe from previous before subscribing to new (prevents rate limits)
     if (baseTrading.ws) {
-      baseTrading.ws.send({ forget_all: 'ticks' }).catch(() => {}).then(() => {
-         baseTrading.ws.send({ ticks: selectedAsset }).catch(() => {});
+      const ws = baseTrading.ws;
+      ws.send({ forget_all: 'ticks' }).catch(() => {}).then(() => {
+         ws.send({ ticks: selectedAsset }).catch(() => {});
       });
     }
 
