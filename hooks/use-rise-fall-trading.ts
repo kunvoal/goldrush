@@ -42,6 +42,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
   const [selectedAsset, setSelectedAsset] = useState<string>('R_10');
   const [executionMode, setExecutionMode] = useState<'manual' | 'dynamic'>('manual');
   const [simulationLogs, setSimulationLogs] = useState<string[]>([]);
+  const [tickTrigger, setTickTrigger] = useState<number>(0);
 
   const metricsRef = useRef<Record<string, UpDownAssetMetrics>>({
     'R_10': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
@@ -121,9 +122,11 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
         const now = Date.now();
 
         state.globalTickCounter++;
-        state.history.push(quote);
-        state.timeHistory.push(now);
-        if (state.history.length > 200) { state.history.shift(); state.timeHistory.shift(); }
+        const newHistory = [...state.history, quote];
+        const newTimeHistory = [...state.timeHistory, now];
+        if (newHistory.length > 200) { newHistory.shift(); newTimeHistory.shift(); }
+        state.history = newHistory;
+        state.timeHistory = newTimeHistory;
 
         if (state.history.length < 2) return;
         const delta = quote - state.history[state.history.length - 2];
@@ -142,6 +145,8 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
           state.lastDirection = currentDirection;
           state.currentStreak = 1;
         }
+
+        setTickTrigger(prev => prev + 1);
       }
 
       if (packet.msg_type === 'buy' && packet.buy) {
@@ -175,6 +180,6 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
     endTime: '', setEndTime: () => {}, proposal: null, buyContract, isBuying, buyResult, buyError,
     clearBuyResult, openPositions: [] as any[], sellContract, sellingId, selectedAsset, setSelectedAsset,
     executionMode, setExecutionMode, simulationLogs, activeMetrics: metricsRef.current[selectedAsset],
-    allMetrics: metricsRef.current, executeOrderPayload
+    allMetrics: metricsRef.current, executeOrderPayload, tickTrigger
   };
 }
