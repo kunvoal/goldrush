@@ -100,9 +100,29 @@ export function TickCanvasChart({
     }
 
     // Streak run highlight bands (blue)
-    const activeRuns = streakRuns.filter(r => {
-      return r.length === selectedDuration;
-    });
+    const activeRuns: StreakRun[] = [];
+    if (quotes.length >= 2) {
+      let currentStreak = 1;
+      let lastDir = 0;
+      for (let i = 1; i < quotes.length; i++) {
+        const delta = quotes[i] - quotes[i - 1];
+        const dir = delta > 0 ? 1 : delta < 0 ? -1 : 0;
+        if (dir !== 0 && dir === lastDir) {
+          currentStreak++;
+          if (currentStreak === selectedDuration) {
+            activeRuns.push({
+              startTime: times[i - (selectedDuration - 1)],
+              endTime: times[i],
+              length: selectedDuration,
+              direction: dir
+            });
+          }
+        } else {
+          lastDir = dir;
+          currentStreak = 1;
+        }
+      }
+    }
 
     for (let i = 0; i < activeRuns.length; i++) {
       const run = activeRuns[i];

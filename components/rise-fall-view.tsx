@@ -28,7 +28,53 @@ export function RiseFallView({
       <Header
         authState={authState} accounts={accounts} activeAccount={activeAccount}
         onLogin={onLogin} onSignUp={onSignUp} onLogout={onLogout} onSwitchAccount={onSwitchAccount}
-        logoSrc={logoSrc} appName={appName} actions={<ThemeToggle />}
+        logoSrc={logoSrc} appName={appName}
+        actions={
+          <div className="flex items-center gap-3">
+            {/* Stake Input */}
+            <div className="flex items-center bg-[#020204] border border-[#16161f] px-2 py-1 rounded h-[32px]" style={{ width: '3cm' }}>
+              <span className="text-[9px] text-[#444b55] font-bold uppercase mr-1">STK:</span>
+              <input 
+                type="text" inputMode="decimal"
+                className="bg-transparent font-bold text-xs text-[#facc15] outline-none border-none w-full p-0"
+                value={trading.stake} onChange={(e) => trading.setStake(e.target.value)}
+              />
+            </div>
+
+            {/* Ticks Duration Dropdown */}
+            <div className="flex items-center bg-[#020204] border border-[#16161f] px-2 py-1 rounded h-[32px]" style={{ width: '3cm' }}>
+              <span className="text-[9px] text-[#444b55] font-bold uppercase mr-1">TKS:</span>
+              <select 
+                className="bg-transparent font-bold text-xs text-[#38bdf8] outline-none border-none w-full cursor-pointer p-0"
+                value={trading.duration} onChange={(e) => trading.setDuration(parseInt(e.target.value, 10))}
+              >
+                <option value="3">3 T</option>
+                <option value="4">4 T</option>
+                <option value="5">5 T</option>
+              </select>
+            </div>
+
+            {/* Mode Switch (Manual vs Dynamic) */}
+            <div className="flex items-center gap-1.5 bg-[#020204] border border-[#16161f] px-2 py-1 rounded h-[32px]">
+              <span className="text-[9px] text-[#444b55] font-bold uppercase mr-1">MODE:</span>
+              <button
+                onClick={() => trading.setExecutionMode(trading.executionMode === 'manual' ? 'dynamic' : 'manual')}
+                className="relative inline-flex h-4 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out border border-transparent focus-visible:outline-none"
+                style={{ backgroundColor: trading.executionMode === 'dynamic' ? '#ec4899' : '#1e293b' }}
+              >
+                <span
+                  className="pointer-events-none block h-3 w-3 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out"
+                  style={{ transform: trading.executionMode === 'dynamic' ? 'translateX(18px)' : 'translateX(2px)' }}
+                />
+              </button>
+              <span className={`text-[9px] font-bold uppercase ${trading.executionMode === 'dynamic' ? 'text-[#ec4899]' : 'text-[#facc15]'}`}>
+                {trading.executionMode}
+              </span>
+            </div>
+
+            <ThemeToggle />
+          </div>
+        }
       />
       <div className="h-[64px] shrink-0" />
 
@@ -49,7 +95,7 @@ export function RiseFallView({
       </div>
 
       {/* CORE CONTENT LAYOUT */}
-      <div className="flex-1 grid grid-rows-[1fr_auto] gap-2 p-2 min-h-0">
+      <div className="flex-1 grid grid-rows-[1fr_auto] gap-2 p-2 px-1 min-h-0">
         
         {/* CHARTS LAYER SECTION CONTAINER */}
         <div className="bg-[#0a0a0d] border border-[#16161f] p-0 flex flex-col min-h-[260px] rounded relative overflow-hidden">
@@ -64,54 +110,6 @@ export function RiseFallView({
         {/* OPERATIONS COMPONENT WRAPPER */}
         <div className="bg-[#0a0a0d] border border-[#16161f] p-3 rounded flex flex-col gap-3">
           
-          {/* RESPONSIVE RADIO SWITCHES */}
-          <div className="flex items-center justify-between border-b border-[#16161f] pb-2.5">
-            <span className="text-[10px] font-bold text-[#444b55] uppercase tracking-wider">Mode:</span>
-            <div className="flex items-center gap-4 bg-[#020204] p-1.5 px-3 border border-[#16161f] rounded">
-              <label className="flex items-center gap-2 cursor-pointer text-[10px] font-bold uppercase text-[#c9ced6]">
-                <input 
-                  type="radio" name="engineMode" value="manual"
-                  checked={trading.executionMode === 'manual'}
-                  onChange={() => trading.setExecutionMode('manual')}
-                  className="w-3 h-3 accent-[#facc15] cursor-pointer"
-                />
-                Manual
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-[10px] font-bold uppercase text-[#c9ced6]">
-                <input 
-                  type="radio" name="engineMode" value="dynamic"
-                  checked={trading.executionMode === 'dynamic'}
-                  onChange={() => trading.setExecutionMode('dynamic')}
-                  className="w-3 h-3 accent-[#ec4899] cursor-pointer"
-                />
-                Dynamic
-              </label>
-            </div>
-          </div>
-
-          {/* PARAMETERS INPUT GRID */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col bg-[#020204] border border-[#16161f] p-1.5 rounded">
-              <span className="text-[9px] text-[#444b55] font-bold uppercase">Stake</span>
-              <input 
-                type="text" inputMode="decimal"
-                className="bg-transparent font-bold text-xs text-[#facc15] outline-none border-none mt-0.5 w-full"
-                value={trading.stake} onChange={(e) => trading.setStake(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col bg-[#020204] border border-[#16161f] p-1.5 rounded">
-              <span className="text-[9px] text-[#444b55] font-bold uppercase">Ticks</span>
-              <select 
-                className="bg-transparent font-bold text-xs text-[#38bdf8] outline-none border-none mt-0.5 cursor-pointer"
-                value={trading.duration} onChange={(e) => trading.setDuration(parseInt(e.target.value, 10))}
-              >
-                <option value="3">3 Ticks</option>
-                <option value="4">4 Ticks</option>
-                <option value="5">5 Ticks</option>
-              </select>
-            </div>
-          </div>
-
           {/* DENSITY WAVE MATRIX RESPONSE DATA TABLE */}
           <div className="bg-[#020204] border border-[#16161f] rounded overflow-hidden">
             <table className="w-full text-center text-xs border-collapse">
@@ -123,18 +121,27 @@ export function RiseFallView({
                 </tr>
               </thead>
               <tbody className="text-[#ffffff] font-bold">
-                <tr>
-                  <td className="p-2 border border-[#16161f] text-left text-[#444b55]">3 Ticks</td>
+                <tr 
+                  className={`cursor-pointer transition-colors duration-150 ${trading.duration === 3 ? 'bg-[#161622]' : 'hover:bg-[#08080c]'}`}
+                  onClick={() => trading.setDuration(3)}
+                >
+                  <td className={`p-2 border border-[#16161f] text-left font-bold ${trading.duration === 3 ? 'text-[#38bdf8]' : 'text-[#444b55]'}`}>3 Ticks</td>
                   <td className="p-2 border border-[#16161f] text-[#00e699]">{trading.activeMetrics?.counts[3].up || 0}</td>
                   <td className="p-2 border border-[#16161f] text-[#ff3355]">{trading.activeMetrics?.counts[3].down || 0}</td>
                 </tr>
-                <tr>
-                  <td className="p-2 border border-[#16161f] text-left text-[#444b55]">4 Ticks</td>
+                <tr 
+                  className={`cursor-pointer transition-colors duration-150 ${trading.duration === 4 ? 'bg-[#161622]' : 'hover:bg-[#08080c]'}`}
+                  onClick={() => trading.setDuration(4)}
+                >
+                  <td className={`p-2 border border-[#16161f] text-left font-bold ${trading.duration === 4 ? 'text-[#38bdf8]' : 'text-[#444b55]'}`}>4 Ticks</td>
                   <td className="p-2 border border-[#16161f] text-[#00e699]">{trading.activeMetrics?.counts[4].up || 0}</td>
                   <td className="p-2 border border-[#16161f] text-[#ff3355]">{trading.activeMetrics?.counts[4].down || 0}</td>
                 </tr>
-                <tr>
-                  <td className="p-2 border border-[#16161f] text-left text-[#444b55]">5 Ticks</td>
+                <tr 
+                  className={`cursor-pointer transition-colors duration-150 ${trading.duration === 5 ? 'bg-[#161622]' : 'hover:bg-[#08080c]'}`}
+                  onClick={() => trading.setDuration(5)}
+                >
+                  <td className={`p-2 border border-[#16161f] text-left font-bold ${trading.duration === 5 ? 'text-[#38bdf8]' : 'text-[#444b55]'}`}>5 Ticks</td>
                   <td className="p-2 border border-[#16161f] text-[#00e699]">{trading.activeMetrics?.counts[5].up || 0}</td>
                   <td className="p-2 border border-[#16161f] text-[#ff3355]">{trading.activeMetrics?.counts[5].down || 0}</td>
                 </tr>
@@ -162,7 +169,7 @@ export function RiseFallView({
       </div>
 
       {/* TERMINAL STATUS BUFFER READOUT BOX */}
-      <div className="m-2 p-2 bg-[#0a0a0d] border border-[#16161f] h-[120px] flex flex-col min-h-0 rounded">
+      <div className="m-2 mx-1 p-2 bg-[#0a0a0d] border border-[#16161f] h-[120px] flex flex-col min-h-0 rounded">
         <div className="flex-1 overflow-y-auto p-1 bg-[#020204] font-mono text-[10px] text-[#ffffff] font-bold leading-normal">
           {trading.simulationLogs.length === 0 ? (
             <div className="text-[#444b55]">Standby...</div>
