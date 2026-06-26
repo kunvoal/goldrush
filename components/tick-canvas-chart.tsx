@@ -180,10 +180,57 @@ export function TickCanvasChart({
         if (gapSeconds > 2) {
           const midX = getX(prevRun.endTime + (run.startTime - prevRun.endTime) / 2);
           if (midX > 10 && midX < lW - 10) {
+            // Find all quotes that are inside this gap time window
+            const gapQuotes: number[] = [];
+            for (let k = 0; k < len; k++) {
+              if (times[k] >= prevRun.endTime && times[k] <= run.startTime) {
+                gapQuotes.push(quotes[k]);
+              }
+            }
+            let gapAvgY = lH / 2;
+            if (gapQuotes.length > 0) {
+              const sumY = gapQuotes.reduce((acc, q) => acc + getY(q), 0);
+              gapAvgY = sumY / gapQuotes.length;
+            }
+
+            // Dynamically position label above or below the price line to prevent overlap
+            let labelY = gapAvgY > lH / 2 ? gapAvgY - 35 : gapAvgY + 35;
+            
+            // Safe bounds check to keep badges inside the canvas
+            if (labelY < 25) labelY = gapAvgY + 35;
+            if (labelY > lH - 25) labelY = gapAvgY - 35;
+
+            const textStr = String(gapSeconds);
+            ctx.font = 'bold 9px monospace';
+            const textWidth = ctx.measureText(textStr).width;
+            const padX = 5;
+            const padY = 3;
+            
+            ctx.fillStyle = 'rgba(2, 2, 5, 0.85)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            
+            // Draw capsule badge
+            const rectW = textWidth + padX * 2;
+            const rectH = 12 + padY * 2;
+            const rectX = midX - rectW / 2;
+            const rectY = labelY - rectH / 2;
+            
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(rectX, rectY, rectW, rectH, 3);
+            } else {
+              ctx.rect(rectX, rectY, rectW, rectH);
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw gap digit
             ctx.fillStyle = '#ffffff';
-            ctx.font = '10px monospace';
             ctx.textAlign = 'center';
-            ctx.fillText(String(gapSeconds), midX, lH / 2);
+            ctx.textBaseline = 'middle';
+            ctx.fillText(textStr, midX, labelY);
+            ctx.textBaseline = 'alphabetic'; // restore default
             ctx.textAlign = 'left';
           }
         }
@@ -305,7 +352,7 @@ export function TickCanvasChart({
       </div>
 
       {/* Control Strip */}
-      <div className="h-[32px] shrink-0 border-t border-[#16161f] bg-[#09090c] px-2 flex items-center justify-between text-[10px] select-none">
+      <div className="h-[32px] shrink-0 border-t border-[#16161f] bg-[#09090c] px-[3cm] flex items-center justify-center gap-12 text-[10px] select-none">
         {/* Left: Timeframe Filters */}
         <div className="flex items-center gap-1">
           <button
@@ -353,3 +400,4 @@ export function TickCanvasChart({
     </div>
   );
 }
+

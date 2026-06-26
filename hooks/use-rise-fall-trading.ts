@@ -17,6 +17,10 @@ export interface UpDownAssetMetrics {
     4: { up: number; down: number };
     5: { up: number; down: number };
   };
+  lastRunTick: Record<number, number>;
+  gapSums: Record<number, number>;
+  runCounts: Record<number, number>;
+  avgGaps: Record<number, number>;
 }
 
 export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticated, onAuthWSFailed }: any) {
@@ -45,14 +49,14 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
   const [tickTrigger, setTickTrigger] = useState<number>(0);
 
   const metricsRef = useRef<Record<string, UpDownAssetMetrics>>({
-    'R_10': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
-    'R_25': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
-    'R_50': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
-    'R_100': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
-    '1HZ10V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
-    '1HZ25V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
-    '1HZ50V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } },
-    '1HZ100V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } } }
+    'R_10': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } }, lastRunTick: { 3: 0, 4: 0, 5: 0 }, gapSums: { 3: 0, 4: 0, 5: 0 }, runCounts: { 3: 0, 4: 0, 5: 0 }, avgGaps: { 3: 0, 4: 0, 5: 0 } },
+    'R_25': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } }, lastRunTick: { 3: 0, 4: 0, 5: 0 }, gapSums: { 3: 0, 4: 0, 5: 0 }, runCounts: { 3: 0, 4: 0, 5: 0 }, avgGaps: { 3: 0, 4: 0, 5: 0 } },
+    'R_50': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } }, lastRunTick: { 3: 0, 4: 0, 5: 0 }, gapSums: { 3: 0, 4: 0, 5: 0 }, runCounts: { 3: 0, 4: 0, 5: 0 }, avgGaps: { 3: 0, 4: 0, 5: 0 } },
+    'R_100': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } }, lastRunTick: { 3: 0, 4: 0, 5: 0 }, gapSums: { 3: 0, 4: 0, 5: 0 }, runCounts: { 3: 0, 4: 0, 5: 0 }, avgGaps: { 3: 0, 4: 0, 5: 0 } },
+    '1HZ10V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } }, lastRunTick: { 3: 0, 4: 0, 5: 0 }, gapSums: { 3: 0, 4: 0, 5: 0 }, runCounts: { 3: 0, 4: 0, 5: 0 }, avgGaps: { 3: 0, 4: 0, 5: 0 } },
+    '1HZ25V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } }, lastRunTick: { 3: 0, 4: 0, 5: 0 }, gapSums: { 3: 0, 4: 0, 5: 0 }, runCounts: { 3: 0, 4: 0, 5: 0 }, avgGaps: { 3: 0, 4: 0, 5: 0 } },
+    '1HZ50V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } }, lastRunTick: { 3: 0, 4: 0, 5: 0 }, gapSums: { 3: 0, 4: 0, 5: 0 }, runCounts: { 3: 0, 4: 0, 5: 0 }, avgGaps: { 3: 0, 4: 0, 5: 0 } },
+    '1HZ100V': { history: [], timeHistory: [], lastDirection: 0, currentStreak: 0, globalTickCounter: 0, isPendingDelay: false, delayExpiryTick: 0, delayDirection: 0, counts: { 3: { up: 0, down: 0 }, 4: { up: 0, down: 0 }, 5: { up: 0, down: 0 } }, lastRunTick: { 3: 0, 4: 0, 5: 0 }, gapSums: { 3: 0, 4: 0, 5: 0 }, runCounts: { 3: 0, 4: 0, 5: 0 }, avgGaps: { 3: 0, 4: 0, 5: 0 } }
   });
 
   const addLog = useCallback((line: string) => {
@@ -153,9 +157,26 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
 
         if (currentDirection !== 0 && currentDirection === state.lastDirection) {
           state.currentStreak++;
-          if (state.currentStreak === 3) state.counts[3][currentDirection === 1 ? 'up' : 'down']++;
-          if (state.currentStreak === 4) state.counts[4][currentDirection === 1 ? 'up' : 'down']++;
-          if (state.currentStreak === 5) state.counts[5][currentDirection === 1 ? 'up' : 'down']++;
+          
+          const registerRun = (L: number) => {
+            state.counts[L as 3|4|5][currentDirection === 1 ? 'up' : 'down']++;
+            
+            const currentTickCount = state.globalTickCounter;
+            const lastTickForL = state.lastRunTick[L] || 0;
+            if (lastTickForL > 0) {
+              const gap = currentTickCount - lastTickForL;
+              state.gapSums[L] += gap;
+              state.runCounts[L]++;
+              state.avgGaps[L] = Math.round(state.gapSums[L] / state.runCounts[L]);
+            } else {
+              state.runCounts[L] = 1;
+            }
+            state.lastRunTick[L] = currentTickCount;
+          };
+
+          if (state.currentStreak === 3) registerRun(3);
+          if (state.currentStreak === 4) registerRun(4);
+          if (state.currentStreak === 5) registerRun(5);
 
           const refs = callbackRefs.current;
           if (refs.executionMode === 'dynamic' && state.currentStreak === refs.duration) {
