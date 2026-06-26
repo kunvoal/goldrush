@@ -79,7 +79,12 @@ export function Header({
             onError={() => setLogoError(true)}
           />
         )}
-        <h1 className="text-lg font-semibold text-foreground hidden sm:block">
+        <h1 className={cn(
+          "text-lg font-semibold hidden sm:block",
+          (process.env.NEXT_PUBLIC_DERIV_APP_NAME || '').toLowerCase() === 'goldrush' 
+            ? "goldrush-glow" 
+            : "text-foreground"
+        )}>
           {process.env.NEXT_PUBLIC_DERIV_APP_NAME ?? 'Deriv Trading'}
         </h1>
       </div>

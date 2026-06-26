@@ -94,3 +94,18 @@
     padding: 0;
   }
 }
+
+@keyframes goldrush-glow-animation {
+  0%, 100% {
+    text-shadow: 0 0 4px rgba(250, 204, 21, 0.4), 0 0 12px rgba(250, 204, 21, 0.2);
+    color: #facc15;
+  }
+  50% {
+    text-shadow: 0 0 10px rgba(250, 204, 21, 0.8), 0 0 20px rgba(250, 204, 21, 0.4);
+    color: #ffd700;
+  }
+}
+
+.goldrush-glow {
+  animation: goldrush-glow-animation 2s infinite ease-in-out;
+}

@@ -182,16 +182,19 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       }
     });
 
-    // Unsubscribe from previous before subscribing to new (prevents rate limits)
+    // Unsubscribe from previous before subscribing to all assets (prevents duplicate streams)
     if (baseTrading.ws) {
       const ws = baseTrading.ws;
       ws.send({ forget_all: 'ticks' }).catch(() => {}).then(() => {
-         ws.send({ ticks: selectedAsset }).catch(() => {});
+        const ALL_ASSETS = ['R_10', 'R_25', 'R_50', 'R_100', '1HZ10V', '1HZ25V', '1HZ50V', '1HZ100V'];
+        ALL_ASSETS.forEach(asset => {
+          ws.send({ ticks: asset, subscribe: 1 }).catch(() => {});
+        });
       });
     }
 
     return () => unbind();
-  }, [baseTrading.ws, baseTrading.isConnected, selectedAsset]);
+  }, [baseTrading.ws, baseTrading.isConnected]);
 
   return {
     ...baseTrading,

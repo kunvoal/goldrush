@@ -31,21 +31,38 @@ export function RiseFallView({
         logoSrc={logoSrc} appName={appName}
         actions={
           <div className="flex items-center gap-3">
+            {/* Volatility select dropdown */}
+            <div className="flex items-center bg-[#020204] border border-[#16161f] px-2 py-1 rounded h-[32px] cursor-pointer">
+              <select
+                className="bg-transparent font-bold text-xs text-[#ffffff] outline-none border-none cursor-pointer p-0"
+                value={trading.selectedAsset}
+                onChange={(e) => trading.setSelectedAsset(e.target.value)}
+              >
+                <option value="R_10">Vol 10</option>
+                <option value="R_25">Vol 25</option>
+                <option value="R_50">Vol 50</option>
+                <option value="R_100">Vol 100</option>
+                <option value="1HZ10V">Vol 10 (1s)</option>
+                <option value="1HZ25V">Vol 25 (1s)</option>
+                <option value="1HZ50V">Vol 50 (1s)</option>
+                <option value="1HZ100V">Vol 100 (1s)</option>
+              </select>
+            </div>
+
             {/* Stake Input */}
             <div className="flex items-center bg-[#020204] border border-[#16161f] px-2 py-1 rounded h-[32px]" style={{ width: '3cm' }}>
-              <span className="text-[9px] text-[#444b55] font-bold uppercase mr-1">STK:</span>
               <input 
-                type="text" inputMode="decimal"
-                className="bg-transparent font-bold text-xs text-[#facc15] outline-none border-none w-full p-0"
+                type="text" inputMode="decimal" placeholder="0.35"
+                className="bg-transparent font-bold text-xs text-[#facc15] placeholder:text-[#facc15]/40 text-center outline-none border-none w-full p-0"
                 value={trading.stake} onChange={(e) => trading.setStake(e.target.value)}
               />
             </div>
 
             {/* Ticks Duration Dropdown */}
             <div className="flex items-center bg-[#020204] border border-[#16161f] px-2 py-1 rounded h-[32px]" style={{ width: '3cm' }}>
-              <span className="text-[9px] text-[#444b55] font-bold uppercase mr-1">TKS:</span>
+              <span className="text-[9px] text-[#444b55] font-bold uppercase mr-1">Ticks:</span>
               <select 
-                className="bg-transparent font-bold text-xs text-[#38bdf8] outline-none border-none w-full cursor-pointer p-0"
+                className="bg-transparent font-bold text-xs text-[#ffffff] outline-none border-none w-full cursor-pointer p-0"
                 value={trading.duration} onChange={(e) => trading.setDuration(parseInt(e.target.value, 10))}
               >
                 <option value="3">3 T</option>
@@ -78,24 +95,8 @@ export function RiseFallView({
       />
       <div className="h-[64px] shrink-0" />
 
-      <div className="flex justify-end p-2 border-b border-[#16161f] bg-[#020204]">
-        <select
-          value={trading.selectedAsset}
-          onChange={(e) => trading.setSelectedAsset(e.target.value)}
-        >
-          <option value="R_10">Vol 10</option>
-          <option value="R_25">Vol 25</option>
-          <option value="R_50">Vol 50</option>
-          <option value="R_100">Vol 100</option>
-          <option value="1HZ10V">Vol 10 (1s)</option>
-          <option value="1HZ25V">Vol 25 (1s)</option>
-          <option value="1HZ50V">Vol 50 (1s)</option>
-          <option value="1HZ100V">Vol 100 (1s)</option>
-        </select>
-      </div>
-
       {/* CORE CONTENT LAYOUT */}
-      <div className="flex-1 grid grid-rows-[1fr_auto] gap-2 p-2 px-1 min-h-0">
+      <div className="flex-1 grid grid-rows-[1fr_auto] gap-2 p-2 px-[3cm] min-h-0">
         
         {/* CHARTS LAYER SECTION CONTAINER */}
         <div className="bg-[#0a0a0d] border border-[#16161f] p-0 flex flex-col min-h-[260px] rounded relative overflow-hidden">
@@ -169,7 +170,7 @@ export function RiseFallView({
       </div>
 
       {/* TERMINAL STATUS BUFFER READOUT BOX */}
-      <div className="m-2 mx-1 p-2 bg-[#0a0a0d] border border-[#16161f] h-[120px] flex flex-col min-h-0 rounded">
+      <div className="m-2 mx-[3cm] p-2 bg-[#0a0a0d] border border-[#16161f] h-[120px] flex flex-col min-h-0 rounded">
         <div className="flex-1 overflow-y-auto p-1 bg-[#020204] font-mono text-[10px] text-[#ffffff] font-bold leading-normal">
           {trading.simulationLogs.length === 0 ? (
             <div className="text-[#444b55]">Standby...</div>
