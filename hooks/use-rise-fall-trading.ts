@@ -106,6 +106,25 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
     }
   }, [baseTrading.ws]);
 
+  // Keep unstable callback dependencies in a stable ref to prevent tick re-subscriptions
+  const callbackRefs = useRef({
+    executionMode,
+    duration,
+    executeOrderPayload,
+    addLog,
+    fetchBalance,
+  });
+
+  useEffect(() => {
+    callbackRefs.current = {
+      executionMode,
+      duration,
+      executeOrderPayload,
+      addLog,
+      fetchBalance,
+    };
+  });
+
   useEffect(() => {
     if (!baseTrading.ws || !baseTrading.isConnected) return;
 
@@ -138,8 +157,9 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
           if (state.currentStreak === 4) state.counts[4][currentDirection === 1 ? 'up' : 'down']++;
           if (state.currentStreak === 5) state.counts[5][currentDirection === 1 ? 'up' : 'down']++;
 
-          if (executionMode === 'dynamic' && state.currentStreak === duration) {
-            executeOrderPayload(symbol, currentDirection === 1 ? 'CALL' : 'PUT');
+          const refs = callbackRefs.current;
+          if (refs.executionMode === 'dynamic' && state.currentStreak === refs.duration) {
+            refs.executeOrderPayload(symbol, currentDirection === 1 ? 'CALL' : 'PUT');
           }
         } else {
           state.lastDirection = currentDirection;
@@ -151,9 +171,9 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
 
       if (packet.msg_type === 'buy' && packet.buy) {
         const buy = packet.buy as Record<string, unknown>;
-        addLog(`[${new Date().toLocaleTimeString()}] Server Receipt: ${buy.contract_id}`);
+        callbackRefs.current.addLog(`[${new Date().toLocaleTimeString()}] Server Receipt: ${buy.contract_id}`);
         // Fetch updated balance after purchase
-        fetchBalance();
+        callbackRefs.current.fetchBalance();
       }
       
       if (packet.msg_type === 'balance' && packet.balance) {
@@ -171,7 +191,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
     }
 
     return () => unbind();
-  }, [baseTrading.ws, baseTrading.isConnected, selectedAsset, executionMode, duration, executeOrderPayload, addLog, fetchBalance]);
+  }, [baseTrading.ws, baseTrading.isConnected, selectedAsset]);
 
   return {
     ...baseTrading,
