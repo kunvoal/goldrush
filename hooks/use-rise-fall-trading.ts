@@ -36,7 +36,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
   const [direction, setDirection] = useState<string>('CALL');
   const [allowEquals, setAllowEquals] = useState<boolean>(false);
   const [stake, setStake] = useState<string>('0.35'); 
-  const [duration, setDuration] = useState<number>(5); 
+  const [duration, setDuration] = useState<number | string>(5); 
   const [durationUnit, setDurationUnit] = useState<string>('t');
   const [isBuying, setIsBuying] = useState<boolean>(false);
   const [buyResult, setBuyResult] = useState<any>(null);
@@ -80,6 +80,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
   const executeOrderPayload = useCallback((symbol: string, orderDirection: 'CALL' | 'PUT') => {
     if (!baseTrading.ws || !baseTrading.isConnected) return;
 
+    const parsedDuration = parseInt(String(duration), 10) || 5;
     const timestamp = new Date().toLocaleTimeString();
     baseTrading.ws.send({
       proposal: 1,
@@ -87,7 +88,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       basis: 'stake',
       contract_type: orderDirection,
       currency: 'USD',
-      duration: duration,
+      duration: parsedDuration,
       duration_unit: durationUnit,
       symbol: symbol
     }).catch(() => {});
@@ -155,6 +156,10 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
         const delta = quote - state.history[state.history.length - 2];
         const currentDirection = delta > 0 ? 1 : delta < 0 ? -1 : 0;
 
+        const refs = callbackRefs.current;
+        const parsedDuration = parseInt(String(refs.duration), 10) || 5;
+        const triggerLength = parsedDuration - 1;
+
         if (currentDirection !== 0 && currentDirection === state.lastDirection) {
           state.currentStreak++;
           
@@ -178,16 +183,42 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
           if (state.currentStreak === 4) registerRun(4);
           if (state.currentStreak === 5) registerRun(5);
 
-          const refs = callbackRefs.current;
-          if (refs.executionMode === 'dynamic' && state.currentStreak === refs.duration) {
-            refs.executeOrderPayload(symbol, currentDirection === 1 ? 'CALL' : 'PUT');
+          // Check if streak reaches triggerLength to start delay
+          if (state.currentStreak === triggerLength) {
+            if (!state.isPendingDelay) {
+              state.isPendingDelay = true;
+              state.delayDirection = currentDirection;
+              const avgGapForL = state.avgGaps[parsedDuration] || 12;
+              state.delayExpiryTick = state.globalTickCounter + Math.max(3, Math.floor(avgGapForL * 0.4));
+            }
           }
         } else {
           state.lastDirection = currentDirection;
           state.currentStreak = 1;
         }
 
+        // Process active delay countdown
+        if (state.isPendingDelay) {
+          const ticksRemaining = state.delayExpiryTick - state.globalTickCounter;
+          if (ticksRemaining <= 0) {
+            state.isPendingDelay = false;
+            if (refs.executionMode === 'dynamic') {
+              refs.executeOrderPayload(symbol, state.delayDirection === 1 ? 'CALL' : 'PUT');
+            }
+          }
+        }
+
         setTickTrigger(prev => prev + 1);
+      }
+
+      if (packet.msg_type === 'proposal' && packet.proposal) {
+        const proposal = packet.proposal as Record<string, unknown>;
+        if (proposal.id && baseTrading.ws) {
+          baseTrading.ws.send({
+            buy: proposal.id,
+            price: Number(proposal.ask_price) || 0.35
+          }).catch(() => {});
+        }
       }
 
       if (packet.msg_type === 'buy' && packet.buy) {
@@ -198,8 +229,7 @@ export function useRiseFallTrading({ ws, isConnected, isExhausted, isAuthenticat
       }
       
       if (packet.msg_type === 'balance' && packet.balance) {
-         // This updates the base hooks balance if needed, though DerivWS usually triggers it
-         // but this ensures we catch subscribe updates
+         // This updates the base hooks balance if needed
       }
     });
 

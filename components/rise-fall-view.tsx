@@ -144,14 +144,34 @@ export function RiseFallView({
               />
             </div>
 
-            {/* Ticks Duration Dropdown */}
-            <CustomDropdown
-              options={tickOptions}
-              value={trading.duration}
-              onChange={(val) => trading.setDuration(val)}
-              label="Ticks:"
-              width="w-[90px]"
-            />
+            {/* Ticks Duration Input */}
+            <div className="flex items-center bg-[#020204] border border-[#16161f] px-2.5 py-1 rounded h-[32px]" style={{ width: '3cm' }}>
+              <span className="text-[9px] text-[#444b55] font-bold uppercase mr-1 select-none">Ticks:</span>
+              <input 
+                type="text" inputMode="numeric"
+                className="bg-transparent font-bold text-xs text-[#ffffff] text-center outline-none border-none w-full p-0"
+                value={trading.duration} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    trading.setDuration('');
+                    return;
+                  }
+                  const num = parseInt(val, 10);
+                  if (!isNaN(num)) {
+                    if (num >= 3 && num <= 5) {
+                      trading.setDuration(num);
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  const num = parseInt(String(trading.duration), 10);
+                  if (isNaN(num) || num < 3 || num > 5) {
+                    trading.setDuration(5);
+                  }
+                }}
+              />
+            </div>
 
             {/* Mode Switch (Manual vs Dynamic) */}
             <div className="flex items-center gap-1.5 bg-[#020204] border border-[#16161f] px-2 py-1 rounded h-[32px]">
@@ -245,6 +265,30 @@ export function RiseFallView({
             </table>
           </div>
 
+          {/* NOTIFIER STATUS BADGE */}
+          {(() => {
+            let signal: 'BUY' | 'WAIT' = 'WAIT';
+            if (trading.activeMetrics?.isPendingDelay) {
+              const ticksRemaining = trading.activeMetrics.delayExpiryTick - trading.activeMetrics.globalTickCounter;
+              if (ticksRemaining <= 2) {
+                signal = 'BUY';
+              } else {
+                signal = 'WAIT';
+              }
+            }
+            return (
+              <div className="flex justify-center items-center h-[28px] select-none mb-1">
+                <div className={`flex items-center gap-1.5 px-4 py-0.5 rounded-full border text-[10px] font-bold transition shadow-md uppercase tracking-wider ${
+                  signal === 'BUY' 
+                    ? 'bg-[#00e699]/10 border-[#00e699] text-[#00e699] animate-pulse shadow-[0_0_12px_rgba(0,230,153,0.2)]' 
+                    : 'bg-[#facc15]/10 border-[#facc15]/40 text-[#facc15] shadow-[0_0_8px_rgba(250,204,21,0.08)]'
+                }`}>
+                  <span>Notifier: {signal}</span>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* DIRECT TRIGGER BUTTON ACTIONS */}
           <div className="flex justify-center gap-4 mt-2">
             <button 
@@ -277,15 +321,15 @@ export function RiseFallView({
 
       {/* NEUROMORPHIC GLASS STATS CARD SIDEBAR POPPING */}
       <div 
-        className={`fixed top-[80px] z-50 bg-[#0a0a0d]/80 backdrop-blur-lg border border-white/10 rounded-xl shadow-[8px_8px_24px_rgba(0,0,0,0.6),-4px_-4px_16px_rgba(255,255,255,0.02)] p-4 flex flex-col font-mono transition-all duration-300 ${
-          showStats ? 'right-4 opacity-100 scale-100' : '-right-[5cm] opacity-0 scale-95 pointer-events-none'
+        className={`fixed top-[80px] z-50 bg-[#0a0a0d]/80 backdrop-blur-lg border border-white/10 rounded-xl shadow-[8px_8px_24px_rgba(0,0,0,0.6),-4px_-4px_16px_rgba(255,255,255,0.02)] p-5 flex flex-col font-mono transition-all duration-300 ${
+          showStats ? 'right-4 opacity-100 scale-100' : '-right-[6cm] opacity-0 scale-95 pointer-events-none'
         }`}
-        style={{ width: '4cm', height: '8cm' }}
+        style={{ width: '5.5cm', height: 'auto' }}
       >
         {/* Header */}
-        <div className="flex justify-between items-center border-b border-white/10 pb-1.5 mb-2 select-none">
-          <span className="text-[9px] font-bold text-[#facc15] uppercase tracking-wider truncate mr-1">
-            STATS: {assetOptions.find(opt => opt.value === trading.selectedAsset)?.label || trading.selectedAsset}
+        <div className="flex justify-between items-center border-b border-white/10 pb-2 mb-3 select-none">
+          <span className="text-[10px] font-bold text-[#facc15] uppercase tracking-wider truncate mr-1">
+            {assetOptions.find(opt => opt.value === trading.selectedAsset)?.label || trading.selectedAsset}
           </span>
           <button 
             onClick={() => setShowStats(false)}
@@ -296,7 +340,7 @@ export function RiseFallView({
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col gap-2.5 text-[10px] overflow-y-auto leading-normal">
+        <div className="flex flex-col gap-3 text-[10px] leading-normal">
           <div>
             <div className="text-white/40 uppercase text-[8px] font-bold">Total Ticks</div>
             <div className="text-white font-bold text-xs mt-0.5">{trading.activeMetrics?.globalTickCounter || 0}</div>
@@ -312,7 +356,7 @@ export function RiseFallView({
             </div>
           </div>
 
-          <div className="border-t border-white/5 pt-1.5 flex flex-col gap-2">
+          <div className="border-t border-white/5 pt-2 flex flex-col gap-2.5">
             <div>
               <div className="text-[#38bdf8] font-bold text-[9px] uppercase">3 Ticks Stride</div>
               <div className="grid grid-cols-2 gap-x-1 mt-0.5 text-white/70">

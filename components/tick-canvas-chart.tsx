@@ -103,7 +103,7 @@ export function TickCanvasChart({
     const offset = offsetRef.current;
 
     const getX = (t: number) => ((t - minT) / rangeT) * lW * zoom + offset;
-    const getY = (q: number) => lH - 20 - ((q - (minQ - rangeQ * 0.05)) / (rangeQ * 1.1)) * (lH - 40);
+    const getY = (q: number) => lH - 28 - ((q - (minQ - rangeQ * 0.05)) / (rangeQ * 1.1)) * (lH - 52);
 
     // Grid lines
     ctx.strokeStyle = 'rgba(255,255,255,0.04)';
@@ -345,53 +345,53 @@ export function TickCanvasChart({
   }, [redraw]);
 
   return (
-    <div className="w-full h-full flex flex-col relative bg-[#020204]">
+    <div className="w-full h-full relative bg-[#020204]">
       {/* Viewport wrapper for canvas */}
-      <div ref={wrapperRef} className="flex-1 relative min-h-0" style={{ cursor: 'crosshair' }}>
+      <div ref={wrapperRef} className="w-full h-full relative min-h-0" style={{ cursor: 'crosshair' }}>
         <canvas ref={canvasRef} />
       </div>
 
-      {/* Control Strip */}
-      <div className="h-[32px] shrink-0 border-t border-[#16161f] bg-[#09090c] px-[3cm] flex items-center justify-center gap-12 text-[10px] select-none">
+      {/* Floating Control Strip overlay */}
+      <div className="absolute bottom-2 left-0 right-0 px-[3cm] flex items-center justify-center gap-8 text-[9px] select-none pointer-events-auto bg-transparent z-10">
         {/* Left: Timeframe Filters */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 bg-[#020204]/75 backdrop-blur-md border border-white/5 rounded px-1.5 py-0.5 shadow-lg">
           <button
             onClick={() => setTimeframe('all')}
-            className={`px-2 py-0.5 font-bold rounded uppercase transition ${timeframe === 'all' ? 'bg-[#38bdf8] text-[#000]' : 'text-[#c9ced6] hover:bg-white/5'}`}
+            className={`px-1.5 py-0.5 font-bold rounded uppercase transition ${timeframe === 'all' ? 'text-[#38bdf8]' : 'text-[#c9ced6] hover:bg-white/5'}`}
           >
             All Time
           </button>
           <button
             onClick={() => setTimeframe('1m')}
-            className={`px-2 py-0.5 font-bold rounded uppercase transition ${timeframe === '1m' ? 'bg-[#38bdf8] text-[#000]' : 'text-[#c9ced6] hover:bg-white/5'}`}
+            className={`px-1.5 py-0.5 font-bold rounded uppercase transition ${timeframe === '1m' ? 'text-[#38bdf8]' : 'text-[#c9ced6] hover:bg-white/5'}`}
           >
             1 Min
           </button>
           <button
             onClick={() => setTimeframe('2m')}
-            className={`px-2 py-0.5 font-bold rounded uppercase transition ${timeframe === '2m' ? 'bg-[#38bdf8] text-[#000]' : 'text-[#c9ced6] hover:bg-white/5'}`}
+            className={`px-1.5 py-0.5 font-bold rounded uppercase transition ${timeframe === '2m' ? 'text-[#38bdf8]' : 'text-[#c9ced6] hover:bg-white/5'}`}
           >
             2 Min
           </button>
           <button
             onClick={() => setTimeframe('5m')}
-            className={`px-2 py-0.5 font-bold rounded uppercase transition ${timeframe === '5m' ? 'bg-[#38bdf8] text-[#000]' : 'text-[#c9ced6] hover:bg-white/5'}`}
+            className={`px-1.5 py-0.5 font-bold rounded uppercase transition ${timeframe === '5m' ? 'text-[#38bdf8]' : 'text-[#c9ced6] hover:bg-white/5'}`}
           >
             5 Min
           </button>
         </div>
 
         {/* Right: Direction Filters */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 bg-[#020204]/75 backdrop-blur-md border border-white/5 rounded px-1.5 py-0.5 shadow-lg">
           <button
             onClick={() => setDirectionFilter(directionFilter === 'up' ? 'all' : 'up')}
-            className={`w-6 h-5 font-bold rounded flex items-center justify-center transition ${directionFilter === 'up' ? 'bg-[#00e699] text-[#000]' : 'text-[#00e699]/60 hover:bg-white/5 border border-[#00e699]/20'}`}
+            className={`w-5 h-4 font-bold rounded flex items-center justify-center transition ${directionFilter === 'up' ? 'bg-[#00e699] text-[#000]' : 'text-[#00e699]/60 hover:bg-white/5'}`}
           >
             ▲
           </button>
           <button
             onClick={() => setDirectionFilter(directionFilter === 'down' ? 'all' : 'down')}
-            className={`w-6 h-5 font-bold rounded flex items-center justify-center transition ${directionFilter === 'down' ? 'bg-[#ff3355] text-[#fff]' : 'text-[#ff3355]/60 hover:bg-white/5 border border-[#ff3355]/20'}`}
+            className={`w-5 h-4 font-bold rounded flex items-center justify-center transition ${directionFilter === 'down' ? 'bg-[#ff3355] text-[#fff]' : 'text-[#ff3355]/60 hover:bg-white/5'}`}
           >
             ▼
           </button>
