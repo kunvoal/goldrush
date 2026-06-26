@@ -77,7 +77,7 @@ export function useBaseTrading({
   const selectSymbol = () => {};
   const contracts: any[] = [];
   const contractsAvailable = true;
-  const durationLimits = { min: 1, max: 10 };
+  const durationLimits = { min: 1, max: 10, unit: 't' };
   const defaultStake = 0.35;
   const currentTick = null;
   const prices: number[] = [];
