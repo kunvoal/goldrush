@@ -69,18 +69,19 @@ export function useBaseTrading({
     }
   }, [isExhausted, ws, onAuthWSFailed]);
 
-  const {
-    symbols,
-    activeSymbol,
-    selectSymbol,
-    contracts,
-    contractsAvailable,
-    durationLimits,
-    defaultStake,
-    isLoading: symbolsLoading,
-  } = useActiveSymbols(ws, isConnected, contractTypes);
-
-  const { currentTick, prices, pipSize } = useTicks(ws, isConnected, activeSymbol);
+  // BYPASS RATE LIMITS: Do not fetch active_symbols or useTicks.
+  // The custom useRiseFallTrading handles raw ticks directly.
+  const symbolsLoading = false;
+  const symbols: any[] = [];
+  const activeSymbol: any = null;
+  const selectSymbol = () => {};
+  const contracts: any[] = [];
+  const contractsAvailable = true;
+  const durationLimits = { min: 1, max: 10 };
+  const defaultStake = 0.35;
+  const currentTick = null;
+  const prices: number[] = [];
+  const pipSize = 2;
 
   // Surface WS-level errors as toasts. Buy and sell errors are handled by
   // their own hooks and are excluded here to avoid double-reporting.
@@ -90,6 +91,10 @@ export function useBaseTrading({
       if (!data.error) return;
       const msgType = data.msg_type as string | undefined;
       if (msgType === 'buy' || msgType === 'sell') return;
+      
+      // Ignore active_symbols and ticks errors since we are bypassing them
+      if (msgType === 'active_symbols' || msgType === 'ticks') return;
+
       const err = data.error as Record<string, string>;
       toast.error('Error', {
         description: err.message ?? 'Unexpected error occurred. Please try again.',
